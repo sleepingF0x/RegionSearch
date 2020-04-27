@@ -79,9 +79,10 @@ class PhoneRegionRedis(object):
     def lookup(cls, phone):
         if regex_phone.match(phone):
             r = cls.rds_cli.hget("phone", phone[:7])
-            r = r.split("|")
             if r:
-                return {"province": r[0], "city": r[1], "isp": r[2]}
+                r = r.split("|")
+                if r:
+                    return {"province": r[0], "city": r[1], "isp": r[2]}
 
 
 class IPRegionRedis(object):
@@ -121,9 +122,10 @@ class IPRegionRedis(object):
         if regex_ipv4_address.match(ip):
             ip_num = cls.ip_to_long(ip)
             r = cls.rds_cli.zrevrangebyscore("ip", ip_num, "-inf", 0, 1)
-            r = r[0].split("|")
             if r:
-                return {"country": r[1], "province": r[2], "city": r[3], "district": r[4], "isp": r[5]}
+                r = r[0].split("|")
+                if r:
+                    return {"country": r[1], "province": r[2], "city": r[3], "district": r[4], "isp": r[5]}
 
 
 class PhoneRegionMem(object):
