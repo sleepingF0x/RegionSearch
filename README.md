@@ -1,62 +1,71 @@
-## benchmark
+# RegionSearch
 
-**record summary**
+手机/IP归属地查询
 
-| table_name | record counts |
-| ---------- | ------------- |
-| phone      | 450155        |
-| ip         | 648831        |
+## Features
 
-**fields of records (phone)**
+* 根据csv生成dat文件，数据源csv由自己更新
+* 基于二分法查找
 
-| field name |
-| ---------- |
-| phone      |
-| province   |
-| city       |
-| isp        |
+## Installation
+	pip install region-search
 
-**fields of records (IP)**
+## Examples
 
-| field name   |
-| ------------ |
-| ip_start_num |
-| country      |
-| province     |
-| city         |
-| isp          |
+### 查询归属地
 
+* [IP](examples/ip.py)
+* [Phone](examples/phone.py)
 
-**performance**
+### 生成dat文件
 
-*search 10000 records*
-
-|                  | time | memory usage |
-| ---------------- | ---------------------- | -------- |
-| PhoneRegionMem   |                        | 372MB    |
-| IPRegionMem      |                        | 458MB    |
-| PhoneRegionRedis |                        | N/A |
-| IPRegionRedis |                        | N/A |
-| PhoneRegion |                        | N/A |
-| IPRegion |                        | N/A |
-
-------
-
-
-ip search:
-
-```
-ipr = IPRegionRedis()
-ipr.lookup("ipaddr")
-
-{'country': '中国', 'province': '广东', 'city': '深圳', 'district': '南山', 'isp': '电信'}
+```shell
+dat_maker --type ip --cfg /path/ip_config.ini
+dat_maker --type phone --cfg /path/phone_config.ini
 ```
 
-phone search:
+## How it works
+
+### dat文件格式说明
+```
+
+        | 4 bytes |                     <- 版本号
+        ------------
+        | 4 bytes |                     <-  第一个索引的偏移
+        -----------------------
+        |  data1                 |      <-  记录区数据1
+        -----------------------
+        |  dataN                 |      <-  记录区数据N
+        -----------------------
+        |  index1                |      <-  索引区索引1
+        -----------------------
+        |  indexN                |      <-  索引区索引N
+        -----------------------
 
 ```
-prr = PhoneRegionRedis()
-prr.lookup("phoneNumber")
+#### 手机归属地dat格式
+* `头部` 头部为8个字节，版本号为4个字节，第一个索引的偏移为4个字节(<4sI)。
+* `记录区` 中每条记录的格式为"\<省份\>|\<城市\>|\<运营商\>\0"。 每条记录以'\0'结束。
+* `索引区` 中每条记录的格式为"<手机号前七位><记录区的偏移>"，每个索引的长度为8个字节(`<II`)。
 
-{'province': '广东', 'city': '深圳', 'isp': '移动'}
-```
+#### ip归属地dat格式
+* `头部` 头部为8个字节，版本号为4个字节，第一个索引的偏移为4个字节(<4sI)。
+* `记录区` 中每条记录的格式为"\<国家\>|\<省份\>|\<城市\>|\<区\>|\<运营商\>\0"。 每条记录以'\0'结束。
+* `索引区` 中每条记录的格式为"<ip段起始地址><记录区的偏移>"，每个索引的长度为8个字节(`<II`)。
+
+#### 解析dat步骤:
+
+* 解析头部8个字节，得到索引区的第一条索引的偏移。
+* 在索引区用二分查找得出待查询数据在记录区的记录偏移。
+* 在记录区从上一步得到的记录偏移处取数据，直到遇到'\0'。
+* 根据记录区具体的数据格式进行解析。
+
+#### 生成dat步骤:
+
+* 解析IP/phone数据库csv文件，根据配置文件对关键字段名称进行转换。
+* 根据IP/phone排序生成一个新的数组。
+* 通过解析数据，分别生成header区，data区，index区三个buffer，最终合为一个dat文件
+
+## License
+
+#### [MIT](https://opensource.org/licenses/mit-license.php)
