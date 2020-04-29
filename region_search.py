@@ -7,7 +7,7 @@ import redis
 from config import *
 from db_pool import DBPool
 
-regex_phone = re.compile(r"1[3-9]\d{9}")
+regex_phone = re.compile("^1[3-9]\d{9}$")
 regex_ipv4_address = re.compile(
     '^(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$')
 
@@ -197,3 +197,7 @@ class IPRegionMem(object):
             r = self.ip_regions[min(left, right)].copy()
             r.pop("ip_start_num")
             return r
+
+
+phoneRegionSearcher = PhoneRegionRedis()
+ipRegionSearcher = IPRegionRedis()
